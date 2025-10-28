@@ -1,0 +1,41 @@
+﻿@page "/mivista"
+@using primerproyecto.Components.Data
+@inject Servicio.ServicioControlador ServicioControlador
+@rendermode InteractiveServer
+
+<h3>Juegos</h3>
+
+<ul>
+    @foreach (var j in juegos)
+    {
+    <li>
+        @j.Nombre
+        @(j.Jugado ? "Ya jugado" : "Pendiente")
+    </li>
+    }
+</ul>
+
+<div>
+    <input @bind="newJuego.Nombre" placeholder="Agregar Juego"/>
+    <button @onclick= "AgregarJuego"> AgregarJuego </button>
+
+</div>
+
+@code {
+    private List<Juego> juegos = new();
+    private Juego newJuego = new();
+    private async Task AgregarJuego()
+    {
+        if (!string.IsNullOrWhiteSpace(newJuego.Nombre))
+        {
+            ServicioControlador.AgregarJuego(newJuego);
+            juegos = await ServicioControlador.ObtenerJuegos();
+            newJuego = new Juego();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        juegos = await ServicioControlador.ObtenerJuegos();
+    }
+}
