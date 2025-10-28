@@ -5,20 +5,27 @@
 
 <h3>Juegos</h3>
 
+<div style="margin-bottom: 20px;">
+    <label>
+        <input type="checkbox" checked="@TodosJugados" @onchange="CambiarTodosJugados" />
+        ¿Ya jugaste todos estos juegos?
+    </label>
+</div>
+
 <ul>
     @foreach (var j in juegos)
     {
-    <li>
-        @j.Nombre
-        @(j.Jugado ? "Ya jugado" : "Pendiente")
-            <input type="checkbox" checked="@j.Jugado" @onclick=" ()=> CambiarJugado(j)"/>
-    </li>
+        <li>
+            @j.Nombre
+            @(j.Jugado ? "Ya jugado" : "Pendiente")
+            <input type="checkbox" checked="@j.Jugado" @onclick=" ()=> CambiarJugado(j)" />
+        </li>
     }
 </ul>
 
 <div>
-    <input @bind="newJuego.Nombre" placeholder="Agregar Juego"/>
-    <button @onclick= "AgregarJuego"> AgregarJuego </button>
+    <input @bind="newJuego.Nombre" placeholder="Agregar Juego" />
+    <button @onclick="AgregarJuego"> AgregarJuego </button>
 
 </div>
 
@@ -26,15 +33,33 @@
     private List<Juego> juegos = new();
     private Juego newJuego = new();
 
-    private void CambiarJugado(Juego juego)
+    private bool TodosJugados => juegos.Any() && juegos.All(j => j.Jugado);
+
+    private async Task ActualizarDatos()
     {
+        juegos = await ServicioControlador.ActualizarDatosDesdeServidor();
+        Console.WriteLine("Datos actualizados desde el servidor");
+    }
+
+    private async Task CambiarTodosJugados(ChangeEventArgs e)
+    {
+        bool nuevoEstado = (bool)e.Value;
+        await ServicioControlador.CambiarEstadoTodos(nuevoEstado);
+        juegos = await ServicioControlador.ObtenerJuegos();
+    }
+
+    private async Task CambiarJugado(Juego juego)
+    {
+        await ServicioControlador.CambiarEstadoJuego(juego.Identificador);
+        juegos = await ServicioControlador.ObtenerJuegos();
         Console.WriteLine("Cambiar estado jugado");
     }
+
     private async Task AgregarJuego()
     {
         if (!string.IsNullOrWhiteSpace(newJuego.Nombre))
         {
-            ServicioControlador.AgregarJuego(newJuego);
+            await ServicioControlador.AgregarJuego(newJuego);
             juegos = await ServicioControlador.ObtenerJuegos();
             newJuego = new Juego();
         }
