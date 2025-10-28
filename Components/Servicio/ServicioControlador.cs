@@ -38,6 +38,11 @@ namespace primerproyecto.Components.Servicio
             await _servicioJuegos.CambiarEstadoTodos(nuevoEstado);
         }
 
+        public async Task EliminarJuego(int identificador)
+        {
+            await _servicioJuegos.EliminarJuego(identificador);
+        }
+
         private async Task<int> GenerarNuevoID()
         {
             var juegos = await _servicioJuegos.ObtenerJuegos();

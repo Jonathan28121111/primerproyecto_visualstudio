@@ -12,13 +12,21 @@
     </label>
 </div>
 
+<div style="margin-bottom: 20px;">
+    <label>
+        <input type="checkbox" checked="@VerSoloNoJugados" @onchange="CambiarFiltroNoJugados" />
+        Ver solamente los no jugados
+    </label>
+</div>
+
 <ul>
-    @foreach (var j in juegos)
+    @foreach (var j in JuegosFiltrados)
     {
         <li>
             @j.Nombre
             @(j.Jugado ? "Ya jugado" : "Pendiente")
             <input type="checkbox" checked="@j.Jugado" @onclick=" ()=> CambiarJugado(j)" />
+            <button @onclick="() => EliminarJuego(j)">Eliminar</button>
         </li>
     }
 </ul>
@@ -32,13 +40,31 @@
 @code {
     private List<Juego> juegos = new();
     private Juego newJuego = new();
+    private bool VerSoloNoJugados = false;
 
     private bool TodosJugados => juegos.Any() && juegos.All(j => j.Jugado);
+
+    private List<Juego> JuegosFiltrados
+    {
+        get
+        {
+            if (VerSoloNoJugados)
+            {
+                return juegos.Where(j => !j.Jugado).ToList();
+            }
+            return juegos;
+        }
+    }
 
     private async Task ActualizarDatos()
     {
         juegos = await ServicioControlador.ActualizarDatosDesdeServidor();
         Console.WriteLine("Datos actualizados desde el servidor");
+    }
+
+    private void CambiarFiltroNoJugados(ChangeEventArgs e)
+    {
+        VerSoloNoJugados = (bool)e.Value;
     }
 
     private async Task CambiarTodosJugados(ChangeEventArgs e)
@@ -63,6 +89,13 @@
             juegos = await ServicioControlador.ObtenerJuegos();
             newJuego = new Juego();
         }
+    }
+
+    private async Task EliminarJuego(Juego juego)
+    {
+        await ServicioControlador.EliminarJuego(juego.Identificador);
+        juegos = await ServicioControlador.ObtenerJuegos();
+        Console.WriteLine($"Juego {juego.Nombre} eliminado");
     }
 
     protected override async Task OnInitializedAsync()

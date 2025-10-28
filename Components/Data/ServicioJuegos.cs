@@ -41,5 +41,15 @@ namespace primerproyecto.Components.Data
             }
             return Task.CompletedTask;
         }
+
+        public Task EliminarJuego(int identificador)
+        {
+            var juego = juegos.FirstOrDefault(j => j.Identificador == identificador);
+            if (juego != null)
+            {
+                juegos.Remove(juego);
+            }
+            return Task.CompletedTask;
+        }
     }
 }
