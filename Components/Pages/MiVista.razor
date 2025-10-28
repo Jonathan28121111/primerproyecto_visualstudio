@@ -1,6 +1,7 @@
 ﻿@page "/mivista"
 @using primerproyecto.Components.Data
 @inject Servicio.ServicioControlador ServicioControlador
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <h3>Juegos</h3>
@@ -62,9 +63,11 @@
         Console.WriteLine("Datos actualizados desde el servidor");
     }
 
-    private void CambiarFiltroNoJugados(ChangeEventArgs e)
+    private async Task CambiarFiltroNoJugados(ChangeEventArgs e)
     {
         VerSoloNoJugados = (bool)e.Value;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "verSoloNoJugados", VerSoloNoJugados.ToString());
+        Console.WriteLine($"Filtro guardado: {VerSoloNoJugados}");
     }
 
     private async Task CambiarTodosJugados(ChangeEventArgs e)
@@ -101,5 +104,26 @@
     protected override async Task OnInitializedAsync()
     {
         juegos = await ServicioControlador.ObtenerJuegos();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var valorGuardado = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "verSoloNoJugados");
+                if (!string.IsNullOrEmpty(valorGuardado))
+                {
+                    VerSoloNoJugados = bool.Parse(valorGuardado);
+                    StateHasChanged();
+                    Console.WriteLine($"Filtro cargado: {VerSoloNoJugados}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al cargar filtro: {ex.Message}");
+            }
+        }
     }
 }
