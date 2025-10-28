@@ -11,6 +11,7 @@
     <li>
         @j.Nombre
         @(j.Jugado ? "Ya jugado" : "Pendiente")
+            <input type="checkbox" checked="@j.Jugado" @onclick=" ()=> CambiarJugado(j)"/>
     </li>
     }
 </ul>
@@ -24,6 +25,11 @@
 @code {
     private List<Juego> juegos = new();
     private Juego newJuego = new();
+
+    private void CambiarJugado(Juego juego)
+    {
+        Console.WriteLine("Cambiar estado jugado");
+    }
     private async Task AgregarJuego()
     {
         if (!string.IsNullOrWhiteSpace(newJuego.Nombre))
