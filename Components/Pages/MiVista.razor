@@ -1,129 +1,117 @@
 ﻿@page "/mivista"
 @using primerproyecto.Components.Data
 @inject Servicio.ServicioControlador ServicioControlador
-@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
-
+@inject IJSRuntime JSRuntime
+@inject Servicio.ServicioControlador JuegosServicioControlador
+ 
 <h3>Juegos</h3>
+ 
+<div>
+<label>
+        <input type="checkbox" checked="@mostrarNoJugados" @onchange="CambiarFiltro" />
 
-<div style="margin-bottom: 20px;">
-    <label>
-        <input type="checkbox" checked="@TodosJugados" @onchange="CambiarTodosJugados" />
-        ¿Ya jugaste todos estos juegos?
-    </label>
+        Mostrar solo juegos no jugados
+</label>
 </div>
-
-<div style="margin-bottom: 20px;">
-    <label>
-        <input type="checkbox" checked="@VerSoloNoJugados" @onchange="CambiarFiltroNoJugados" />
-        Ver solamente los no jugados
-    </label>
-</div>
-
+ 
 <ul>
-    @foreach (var j in JuegosFiltrados)
+
+    @foreach (var j in juegosFiltrados)
+
     {
         <li>
             @j.Nombre
-            @(j.Jugado ? "Ya jugado" : "Pendiente")
-            <input type="checkbox" checked="@j.Jugado" @onclick=" ()=> CambiarJugado(j)" />
-            <button @onclick="() => EliminarJuego(j)">Eliminar</button>
+            @(j.Jugado ? "(Jugado)" : "(Pendiente)")
+            <input type="checkbox" checked="@j.Jugado" @onclick="() => CambiarJugado(j)" />
+            <button @onclick="() => EliminarJuego(j.Identificador)">Eliminar</button>
         </li>
     }
 </ul>
-
+ 
 <div>
-    <input @bind="newJuego.Nombre" placeholder="Agregar Juego" />
-    <button @onclick="AgregarJuego"> AgregarJuego </button>
-
+<input @bind="newJuego.Nombre" placeholder="Agregar juego" 
+<button @onclick="AgregarJuego">Agregar juego</button>
 </div>
-
+ 
 @code {
+
     private List<Juego> juegos = new();
+    private List<Juego> juegosFiltrados =>
+
+        mostrarNoJugados ? juegos.Where(j => !j.Jugado).ToList() : juegos;
+ 
     private Juego newJuego = new();
-    private bool VerSoloNoJugados = false;
+    private bool mostrarNoJugados = false;
 
-    private bool TodosJugados => juegos.Any() && juegos.All(j => j.Jugado);
-
-    private List<Juego> JuegosFiltrados
+    private async Task EliminarJuego(int identificador)
     {
-        get
+        await JuegosServicioControlador.EliminarJuego(identificador);
+        juegos = await JuegosServicioControlador.ObtenerJuegos();
+    }
+    private async Task CambiarJugado(Juego j)
+    {
+        j.Jugado = !j.Jugado;
+        Console.WriteLine($"Estado cambiado: {j.Nombre} → {(j.Jugado ? "Jugado" : "Pendiente")}");
+        await JuegosServicioControlador.ActualizarJuego(j);
+    }
+    private async Task CambiarFiltro(ChangeEventArgs e)
+    {
+        mostrarNoJugados = (bool)e.Value;
+        await GuardarPreferenciaFiltro();
+    }
+
+    private async Task GuardarPreferenciaFiltro()
+    {
+        try
         {
-            if (VerSoloNoJugados)
-            {
-                return juegos.Where(j => !j.Jugado).ToList();
-            }
-            return juegos;
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "mostrarNoJugados", mostrarNoJugados.ToString());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error guardando preferencia: {ex.Message}");
         }
     }
 
-    private async Task ActualizarDatos()
+    private async Task CargarPreferenciaFiltro()
     {
-        juegos = await ServicioControlador.ActualizarDatosDesdeServidor();
-        Console.WriteLine("Datos actualizados desde el servidor");
-    }
-
-    private async Task CambiarFiltroNoJugados(ChangeEventArgs e)
-    {
-        VerSoloNoJugados = (bool)e.Value;
-        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "verSoloNoJugados", VerSoloNoJugados.ToString());
-        Console.WriteLine($"Filtro guardado: {VerSoloNoJugados}");
-    }
-
-    private async Task CambiarTodosJugados(ChangeEventArgs e)
-    {
-        bool nuevoEstado = (bool)e.Value;
-        await ServicioControlador.CambiarEstadoTodos(nuevoEstado);
-        juegos = await ServicioControlador.ObtenerJuegos();
-    }
-
-    private async Task CambiarJugado(Juego juego)
-    {
-        await ServicioControlador.CambiarEstadoJuego(juego.Identificador);
-        juegos = await ServicioControlador.ObtenerJuegos();
-        Console.WriteLine("Cambiar estado jugado");
+        try
+        {
+            var valor = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "mostrarNoJugados");
+            if (!string.IsNullOrEmpty(valor))
+            {
+                mostrarNoJugados = bool.Parse(valor);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error cargando preferencia: {ex.Message}");
+        }
     }
 
     private async Task AgregarJuego()
     {
         if (!string.IsNullOrWhiteSpace(newJuego.Nombre))
+
         {
-            await ServicioControlador.AgregarJuego(newJuego);
-            juegos = await ServicioControlador.ObtenerJuegos();
+            await JuegosServicioControlador.AgregarJuego(newJuego);
+
+            juegos = await JuegosServicioControlador.ObtenerJuegos();
+
             newJuego = new Juego();
+
         }
-    }
 
-    private async Task EliminarJuego(Juego juego)
-    {
-        await ServicioControlador.EliminarJuego(juego.Identificador);
-        juegos = await ServicioControlador.ObtenerJuegos();
-        Console.WriteLine($"Juego {juego.Nombre} eliminado");
-    }
 
+
+    }
+ 
     protected override async Task OnInitializedAsync()
+
     {
-        juegos = await ServicioControlador.ObtenerJuegos();
+
+        juegos = await JuegosServicioControlador.ObtenerJuegos();
+        await CargarPreferenciaFiltro();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            try
-            {
-                var valorGuardado = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "verSoloNoJugados");
-                if (!string.IsNullOrEmpty(valorGuardado))
-                {
-                    VerSoloNoJugados = bool.Parse(valorGuardado);
-                    StateHasChanged();
-                    Console.WriteLine($"Filtro cargado: {VerSoloNoJugados}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error al cargar filtro: {ex.Message}");
-            }
-        }
-    }
 }
